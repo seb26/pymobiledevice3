@@ -34,6 +34,8 @@ from pymobiledevice3.lockdown_service_provider import LockdownServiceProvider
 from pymobiledevice3.services.lockdown_service import LockdownService
 from pymobiledevice3.utils import try_decode
 
+import xxhash
+
 MAXIMUM_READ_SIZE = 4 * 1024 ** 2  # 4 MB
 MODE_MASK = 0o0000777
 
@@ -233,19 +235,24 @@ class AfcService(LockdownService):
             if os.path.isdir(dst):
                 dst = os.path.join(dst, os.path.basename(relative_src))
             with open(dst, 'wb') as f:
+                hash = xxhash.xxh3_64()
                 src_size = self.stat(src)['st_size']
                 if src_size <= MAXIMUM_READ_SIZE:
-                    f.write(self.get_file_contents(src))
+                    chunk = self.get_file_contents(src)
+                    f.write(chunk)
+                    hash.update(chunk)
                 else:
                     left_size = src_size
                     handle = self.fopen(src)
                     for _ in trange(src_size // MAXIMUM_READ_SIZE + 1):
-                        f.write(self.fread(handle, min(MAXIMUM_READ_SIZE, left_size)))
+                        chunk = self.fread(handle, min(MAXIMUM_READ_SIZE, left_size))
+                        f.write(chunk)
+                        hash.update(chunk)
                         left_size -= MAXIMUM_READ_SIZE
                     self.fclose(handle)
             os.utime(dst, (os.stat(dst).st_atime, self.stat(src)['st_mtime'].timestamp()))
             if callback is not None:
-                callback(src, dst)
+                return callback(src, dst, hash.hexdigest())
         else:
             # directory
             dst_path = pathlib.Path(dst) / os.path.basename(relative_src)
