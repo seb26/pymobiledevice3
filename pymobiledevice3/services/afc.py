@@ -244,11 +244,10 @@ class AfcService(LockdownService):
                 else:
                     left_size = src_size
                     handle = self.fopen(src)
-                    for _ in trange(src_size // MAXIMUM_READ_SIZE + 1):
-                        chunk = self.fread(handle, min(MAXIMUM_READ_SIZE, left_size))
-                        f.write(chunk)
-                        hash.update(chunk)
-                        left_size -= MAXIMUM_READ_SIZE
+                    chunk = self.fread(handle, min(MAXIMUM_READ_SIZE, left_size))
+                    f.write(chunk)
+                    hash.update(chunk)
+                    left_size -= MAXIMUM_READ_SIZE
                     self.fclose(handle)
             os.utime(dst, (os.stat(dst).st_atime, self.stat(src)['st_mtime'].timestamp()))
             if callback is not None:
