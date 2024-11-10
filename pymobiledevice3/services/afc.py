@@ -251,7 +251,7 @@ class AfcService(LockdownService):
                     self.fclose(handle)
             os.utime(dst, (os.stat(dst).st_atime, self.stat(src)['st_mtime'].timestamp()))
             if callback is not None:
-                return callback(src, dst, hash.hexdigest())
+                callback(src, dst, hash.hexdigest())
         else:
             # directory
             dst_path = pathlib.Path(dst) / os.path.basename(relative_src)
